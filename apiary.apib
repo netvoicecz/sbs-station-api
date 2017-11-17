@@ -1,0 +1,49 @@
+FORMAT: 1A
+HOST: https://vos.phonelix.cz/px-oauth-server/
+
+# PHONElix
+
+API projektu PHONElix.
+
+# Group XMPP Extras
+
+Rozšíření XMPP
+
+## User collection in group [/xmpp/groups/{groupId}/users]
++ Parameters
+    + groupId: 45 (number) - group ID
+    
+### List all users of group [GET]
++ Response 200 (application/json)
+
+        [
+            "frantisek.novotny@seznam.cz",
+            "lukas.svoboda@centrum.cz"
+        ]
+
+### Add new user to group [POST]
++ Request (application/json)
+
+        "jan.novak@gmail.com"
+
++ Response 201 (application/json)
+        
+## User in group [/groups/{groupId}/users/{userId}]
++ Parameters
+    + groupId: 45 (number) - group ID
+    + userId: jan.novak@gmail.com (string) - user ID
+
+### Delete user from group [DELETE]
++ Response 204
+
+## Group collection of user [/users/{userId}/groups]
++ Parameters
+    + userId: jan.novak@gmail.com (string) - user ID
+
+### List all groups of user [GET]
++ Response 200 (application/json)
+
+        [
+            45,
+            68
+        ]
