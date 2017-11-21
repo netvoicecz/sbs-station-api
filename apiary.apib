@@ -3,78 +3,231 @@ HOST: http://polls.apiblueprint.org/
 
 # sbs-station
 
-Polls is a simple API allowing consumers to view polls and vote in them.
+API projektu Smart Bike Station pro komunikaci mezi centrální jednotkou a NetVoice aplikací.
 
-## Questions Collection [/questions]
+TODO: dát atributům lockState a, b, c smysluplné názvy
 
-### List All Questions [GET]
+# Group Heartbeat
 
-+ Response 200 (application/json)
+## Heartbeat event [/heartbeat-events]
 
-        [
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 2048
-                    }, {
-                        "choice": "Python",
-                        "votes": 1024
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 512
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 256
-                    }
-                ]
-            }
-        ]
-
-### Create a New Question [POST]
-
-You may create your own question using this action. It takes a JSON
-object containing a question and a collection of answers in the
-form of choices.
+### Post heartbeat event [POST]
 
 + Request (application/json)
 
         {
-            "question": "Favourite programming language?",
-            "choices": [
-                "Swift",
-                "Python",
-                "Objective-C",
-                "Ruby"
-            ]
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "battery": 71.5,
+            "temperature": 38.3,
+            "lockSensorsList": [
+                {
+                    "front": true,
+                    "middle": false,
+                    "rear": true
+                },
+                {
+                    "front": false,
+                    "middle": false,
+                    "rear": false
+                }
+            ],
+            "fanSpinning": false
         }
 
 + Response 201 (application/json)
 
-    + Headers
+        {
+            "time": "2017-11-20T11:12:25.284+02:00",
+            "fanOn": 40.0,
+            "fanOff": 35.0,
+            "heartbeatInterval": 5
+        }
 
-            Location: /questions/2
 
+# Group Lock
+        
+## Lock request [/lock-requests]
+
+Požadavek na připnutí kola.
+
+### Post lock request [POST]
+
++ Request (application/json)
+    + Attributes (object)
+        + stationId: J24875 (string)
+        + foxId: I54887 (string)
+        + lockId: 0 (number) - Pozice zámku na stojanu (číslováno od nuly)
+        + userId: info_z_karty (string) - Identifikátor z karty
+        + lockSensors (object) - Posílá se pro jistotu, kdyby se ztratil dřívější update stavu.
+            + front: true (boolean) - Přední čidlo
+            + middle: false (boolean) - Čelisti zámku
+            + rear: true (boolean) - Zadní čidlo
+            
+        
++ Response 201
+
+    Vrací v případě, že je připnutí kola povoleno.
+    
     + Body
 
-            {
-                "question": "Favourite programming language?",
-                "published_at": "2015-08-05T08:40:51.620Z",
-                "choices": [
-                    {
-                        "choice": "Swift",
-                        "votes": 0
-                    }, {
-                        "choice": "Python",
-                        "votes": 0
-                    }, {
-                        "choice": "Objective-C",
-                        "votes": 0
-                    }, {
-                        "choice": "Ruby",
-                        "votes": 0
-                    }
-                ]
-            }
++ Response 403
+
+    Vrací v případě, že je připnutí kola zamítnuto.
+    
+    + Body
+
+## Pre-authorized lock request [/preauth-lock-requests]
+
+Zamknutí kola po předchozí autentizaci vedlejším kanálem (QR kód, po telefonu, emergency, apod.).
+
+### Post pre-authorized lock request [POST]
+
++ Request (application/json)
+
+        {
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "lockId": 0
+        }
+        
++ Response 201
+
+    Vrací v případě, že je připnutí kola povoleno.
+    
+    + Body
+
++ Response 403
+
+    Vrací v případě, že je připnutí kola zamítnuto.
+    
+    + Body
+
+## Lock result event [/lock-events]
+
+Oznámení o stavu připnutí kola poté, co bylo připnutí povoleno.
+
+### Post lock result event [POST]
+
++ Request (application/json)
+
+        {
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "lockId": 0,
+            "completed": true
+        }
+        
++ Response 201
+
+
+# Group Unlock offline
+
+Odemknutí kola, kdy k samotnému odemknutí není nutná konektivita na NetVoice server.
+
+## Unlock report [/unlock-reports]
+
+Report pokusu (úspěšném či neúspěšném) o odemknutí kola.
+
+### Post unlock report [POST]
+
++ Request (application/json)
+    + Attributes (object)
+        + stationId: J24875 (string)
+        + foxId: I54887 (string)
+        + lockId: 0 (number) - Pozice zámku na stojanu (číslováno od nuly)
+        + time: `2017-11-20T12:12:25.284+02:00` (string) - Čas odemknutí ve formátu ISO 8601
+        + hwUnlock: false (boolean) - True, pokud došlo k nouzovému odemknutí pomocí HW tlačítka uvnitř stojanu, jinak false
+        + authorized: true (boolean) - True, pokud šlo o uživatele oprávněného k odemknutí kola (stejná karta, která kolo uzamkla), jinak false
+        + completed: true (boolean) - True, pokud bylo kolo skutečně odepnuto ze stojanu, jinak false
+        
++ Response 201
+
+
+# Group Unlock online
+
+Odemknutí kola vyžadující konektivitu na NetVoice server.
+
+## Pre-authorized unlock request [/preauth-unlock-requests]
+
+Odemknutí kola po předchozí autentizaci vedlejším kanálem (QR kód, po telefonu, emergency, apod.).
+
+### Post pre-authorized unlock request [POST]
+
++ Request (application/json)
+
+        {
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "lockId": 0
+        }
+        
++ Response 201
+
+    Vrací v případě, že je odepnutí kola povoleno.
+    
+    + Body
+
++ Response 403
+
+    Vrací v případě, že je odepnutí kola zamítnuto.
+    
+    + Body
+
+## Unlock result event [/unlock-events]
+
+Oznámení o stavu odepnutí kola poté, co bylo odepnutí povoleno.
+
+### Post unlock result event [POST]
+
++ Request (application/json)
+
+        {
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "lockId": 0,
+            "completed": true
+        }
+        
++ Response 201
+
+# Group Autonomy
+
+## Autonomy report [/autonomy-reports]
+
+### Post autonomy report [POST]
+
++ Request (application/json)
+
+        {
+            "from": "2017-11-20T12:10:00.000+02:00",
+            "to": "2017-11-20T12:23:00.000+02:00",
+            "stationId": "J24875",
+            "foxId": "I54887",
+            "events": [
+                {
+                    "type": "LOCK",
+                    "time": "2017-11-20T12:11:00.000+02:00",
+                    "lockId": 0,
+                    "userId": "info_z_karty",
+                    "completed": true
+                },
+                {
+                    "type": "LOCK",
+                    "time": "2017-11-20T12:11:30.000+02:00",
+                    "lockId": 1,
+                    "userId": "info_z_karty",
+                    "completed": true
+                },
+                {
+                    "type": "UNLOCK",
+                    "time": "2017-11-20T12:12:00.000+02:00",
+                    "lockId": 1,
+                    "hwUnlock": false,
+                    "authorized": true,
+                    "completed": true
+                }
+            ]
+        }
+        
++ Response 201
